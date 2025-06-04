@@ -1,30 +1,38 @@
 import { useEffect, useState } from "react";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
-import { API_URLS } from "../../helper/constants.js";
+import { API_URLS, CACHE_KEYS } from "../../helper/constants.js";
+import useLocalCache from "../../hooks/useLocalCache";
 
 const Leaderboard = () => {
   const axiosPrivate = useAxiosPrivate();
   const [entries, setEntries] = useState([]);
+  const { get, set, clear } = useLocalCache();
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const response = await axiosPrivate.get(API_URLS.LEADERBOARD.RANKINGS);
-        setEntries(response.data);
-      } catch (error) {
-        console.error("Failed to fetch leaderboard", error);
-        setEntries([]);
-      }
-    };
+    const cached = get(CACHE_KEYS.LEADERBOARD);
+    if (cached) {
+      setEntries(cached);
+    } else {
+      fetchLeaderboard();
+    }
+  }, [axiosPrivate]);
 
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await axiosPrivate.get(API_URLS.LEADERBOARD.RANKINGS);
+      setEntries(response.data);
+
+      set(CACHE_KEYS.LEADERBOARD, response.data);
+    } catch (error) {
+      console.error("Failed to fetch leaderboard", error);
+      setEntries([]);
+    }
+  };
+
+  const handleRefreshLeaderboard = () => {
+    clear(CACHE_KEYS.LEADERBOARD);
     fetchLeaderboard();
-  }, []);
-
-  const sortedEntries = [...entries].sort((a, b) => {
-    const ratioA = a.totalScore / a.totalQuestions;
-    const ratioB = b.totalScore / b.totalQuestions;
-    return ratioB - ratioA;
-  });
+  };
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -32,11 +40,20 @@ const Leaderboard = () => {
         Leaderboard
       </h2>
 
-      {sortedEntries.length === 0 ? (
+      <div className="flex justify-center mb-4">
+        <button
+          onClick={handleRefreshLeaderboard}
+          className="bg-yellow-500 text-white font-semibold rounded px-4 py-2 hover:bg-yellow-600 transition-colors"
+        >
+          Refresh Leaderboard
+        </button>
+      </div>
+
+      {entries.length === 0 ? (
         <p className="text-center text-gray-600">No leaderboard data found.</p>
       ) : (
         <ul className="space-y-2">
-          {sortedEntries.map((entry, index) => (
+          {entries.map((entry, index) => (
             <li
               key={index}
               className="flex justify-between items-center bg-white border border-gray-300 rounded p-3 shadow-sm"

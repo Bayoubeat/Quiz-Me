@@ -14,9 +14,9 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -31,39 +31,40 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public AuthenticationResponseDto register(AuthenticationRequestDto request) {
-        request.setUsername(StringUtils.capitalize(request.getUsername()));
+        String upName = request.getUsername().toUpperCase();
 
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+        if (userRepository.findByUsername(upName).isPresent()) {
             throw new UsernameAlreadyTakenException();
         }
         User user = new User();
-        user.setUsername(request.getUsername());
+        user.setUsername(upName);
+        user.setDisplayName(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.getRoles().add("ROLE_USER");
+
+        if (Objects.equals(user.getUsername(), "ADMIN")) {
+            user.getRoles().add("ROLE_ADMIN");
+        }
+
         userRepository.save(user);
 
-        return new AuthenticationResponseDto(null, null, null, null);
+        return generateUserTokens(user);
     }
 
     @Override
     public AuthenticationResponseDto authenticate(AuthenticationRequestDto request) {
-        request.setUsername(StringUtils.capitalize(request.getUsername()));
+        String upName = request.getUsername().toUpperCase();
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
+                        upName,
                         request.getPassword()
                 )
         );
-        User user = userRepository.findByUsername(request.getUsername())
+        User user = userRepository.findByUsername(upName)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String jti = UUID.randomUUID().toString();
-
-        String accessToken = jwtUtil.generateToken(user.getUsername(), jti);
-        String refreshToken = jwtUtil.generateRefreshToken(user.getUsername(), jti);
-
-        saveRefreshToken(user, refreshToken, jti);
-        return new AuthenticationResponseDto(accessToken, refreshToken, user.getUsername(), user.getRoles());
+        return generateUserTokens(user);
     }
 
     @Override
@@ -85,15 +86,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         refreshTokenRepository.save(storedToken);
 
         String newJti = UUID.randomUUID().toString();
-
-
         String newAccessToken = jwtUtil.generateToken(username, newJti);
         String newRefreshToken = jwtUtil.generateRefreshToken(username, newJti);
         saveRefreshToken(user, newRefreshToken, newJti);
 
-        return new AuthenticationResponseDto(newAccessToken, newRefreshToken, user.getUsername(), user.getRoles());
+        return new AuthenticationResponseDto(newAccessToken, newRefreshToken, user.getUsername(), user.getDisplayName(), user.getRoles());
     }
 
+    private AuthenticationResponseDto generateUserTokens(User user) {
+        String jti = UUID.randomUUID().toString();
+        String accessToken = jwtUtil.generateToken(user.getUsername(), jti);
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUsername(), jti);
+        saveRefreshToken(user, refreshToken, jti);
+
+        return new AuthenticationResponseDto(accessToken, refreshToken, user.getUsername(), user.getDisplayName(), user.getRoles());
+    }
 
     private void saveRefreshToken(User user, String rawToken, String jti) {
         String hashedToken = DigestUtils.sha256Hex(rawToken);

@@ -40,7 +40,13 @@ export default function Login() {
 
       const accessToken = response?.data?.accessToken;
       const roles = response?.data?.roles;
-      setAuth({ username: username, roles, accessToken });
+      const upUsername = response?.data?.username;
+      setAuth({
+        username: upUsername,
+        displayName: username,
+        roles,
+        accessToken,
+      });
       localStorage.setItem("auth", JSON.stringify(auth));
       navigate(from, { replace: true });
     } catch (err) {

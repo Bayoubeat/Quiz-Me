@@ -24,36 +24,21 @@ public class AuthController {
     private final RefreshTokenRepository refreshTokenRepository;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody @Valid AuthenticationRequestDto request) {
-        return ResponseEntity.ok(authService.register(request));
+    public ResponseEntity<?> register(@RequestBody @Valid AuthenticationRequestDto request, HttpServletResponse response) {
+        AuthenticationResponseDto auth = authService.register(request);
+        return getAuthEntity(response, auth);
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Valid AuthenticationRequestDto request, HttpServletResponse response) {
         AuthenticationResponseDto auth = authService.authenticate(request);
-        ResponseCookie cookie = ResponseCookie.from("refreshToken", auth.getRefreshToken())
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .sameSite("Strict")
-                .maxAge(Duration.ofDays(7))
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-        return ResponseEntity.ok(new AuthenticationResponseDto(auth.getAccessToken(), null, auth.getUsername(), auth.getRoles()));
+        return getAuthEntity(response, auth);
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(@CookieValue("refreshToken") String refreshToken, HttpServletResponse response) {
         AuthenticationResponseDto auth = authService.refreshToken(refreshToken);
-        ResponseCookie cookie = ResponseCookie.from("refreshToken", auth.getRefreshToken())
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .sameSite("Strict")
-                .maxAge(Duration.ofDays(7))
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-        return ResponseEntity.ok(new AuthenticationResponseDto(auth.getAccessToken(), null, auth.getUsername(), auth.getRoles()));
+        return getAuthEntity(response, auth);
     }
 
     @PostMapping("/logout")
@@ -74,5 +59,17 @@ public class AuthController {
         response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
 
         return ResponseEntity.ok().build();
+    }
+
+    private ResponseEntity<?> getAuthEntity(HttpServletResponse response, AuthenticationResponseDto auth) {
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", auth.getRefreshToken())
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .sameSite("Strict")
+                .maxAge(Duration.ofDays(7))
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        return ResponseEntity.ok(new AuthenticationResponseDto(auth.getAccessToken(), null, auth.getUsername(), auth.getDisplayName(), auth.getRoles()));
     }
 }

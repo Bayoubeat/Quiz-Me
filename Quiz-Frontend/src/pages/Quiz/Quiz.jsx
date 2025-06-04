@@ -20,6 +20,7 @@ const Quiz = () => {
         setQuiz(response.data);
       } catch (error) {
         console.error("Failed to fetch quiz", error);
+        navigate(WEB_URLS.MISSING);
       }
     };
 

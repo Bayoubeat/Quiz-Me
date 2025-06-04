@@ -1,9 +1,6 @@
 package com.ajuarez.quizbackend.service;
 
-import com.ajuarez.quizbackend.dto.quiz.MultipleQuizCreationRequestDto;
-import com.ajuarez.quizbackend.dto.quiz.QuizCreationRequestDto;
-import com.ajuarez.quizbackend.dto.quiz.QuizDetailResponseDto;
-import com.ajuarez.quizbackend.dto.quiz.QuizSummaryResponseDto;
+import com.ajuarez.quizbackend.dto.quiz.*;
 import com.ajuarez.quizbackend.model.Quiz;
 import com.ajuarez.quizbackend.model.User;
 import org.springframework.data.domain.Sort;
@@ -25,10 +22,14 @@ public interface QuizService {
 
     void deleteQuizzes(List<Long> quizIds, User currentUser);
 
-    List<String> getAllUniqueCategories();
+    QuizSearchingInfoResponseDto getQuizSearchingInfo();
 
-    List<String> getAllUniqueDifficulties();
+    void createCategory(QuizCategoryCreationRequestDto dto, User creator);
 
-    List<String> getAllUniqueCreators();
+    void createDifficulty(QuizDifficultyCreationRequestDto dto, User creator);
+
+    void createMultipleCategory(MultiCategoryRequestDTo dto, User creator);
+
+    void createMultipleDifficulty(MultiDifficultyRequestDto dto, User creator);
 }
 

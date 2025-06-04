@@ -8,5 +8,5 @@ import lombok.Getter;
 @AllArgsConstructor
 public class QuizMapperContext {
     private final QuizAttemptRepository quizAttemptRepository;
-    private final Long userId; // ID of the current user
+    private final Long userId;
 }

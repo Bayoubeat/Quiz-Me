@@ -16,5 +16,7 @@ public class AuthenticationResponseDto {
 
     private String username;
 
+    private String displayName;
+
     private List<String> roles;
 }

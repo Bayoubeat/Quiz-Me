@@ -25,6 +25,7 @@ const Results = () => {
       <h2 className="text-3xl font-bold text-purple-600 mb-4 text-center">
         Results for: {result.title}
       </h2>
+
       <div className="text-center text-gray-700 space-y-2">
         <p className="text-lg font-medium">
           Score:{" "}
@@ -40,6 +41,33 @@ const Results = () => {
             Login to save your scores!
           </p>
         )}
+      </div>
+
+      <div className="mt-6 space-y-4">
+        {result.answers.map((item, index) => (
+          <div
+            key={index}
+            className={`border rounded p-4 ${
+              item.isCorrect
+                ? "border-green-400 bg-green-50"
+                : "border-red-400 bg-red-50"
+            }`}
+          >
+            <p className="font-semibold mb-1">
+              Q{index + 1}: {item.question}
+            </p>
+            <p>
+              Your Answer: <span className="font-medium">{item.answer}</span>
+            </p>
+            <p
+              className={`font-semibold ${
+                item.isCorrect ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {item.isCorrect ? "Correct" : "Incorrect"}
+            </p>
+          </div>
+        ))}
       </div>
 
       <div className="flex justify-center mt-6">

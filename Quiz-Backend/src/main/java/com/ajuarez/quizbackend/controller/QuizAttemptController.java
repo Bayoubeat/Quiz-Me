@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -29,8 +28,7 @@ public class QuizAttemptController {
 
         User user = null;
         if (userDetails != null) {
-            String username = StringUtils.capitalize(userDetails.getUsername());
-            user = userRepository.findByUsername(username).orElse(null);
+            user = userRepository.findByUsername(userDetails.getUsername().toUpperCase()).orElse(null);
         }
 
         QuizAttemptResponseDto response = quizAttemptService.submitAttempt(dto, user);
@@ -40,8 +38,7 @@ public class QuizAttemptController {
 
     @GetMapping("/history")
     public ResponseEntity<?> searchAttempts(@AuthenticationPrincipal UserDetails userDetails) {
-        String username = StringUtils.capitalize(userDetails.getUsername());
-        User user = userRepository.findByUsername(username).orElseThrow();
+        User user = userRepository.findByUsername(userDetails.getUsername().toUpperCase()).orElseThrow();
         QuizAttemptHistoryResponseDto response = quizAttemptService.searchAttempts(user);
         return ResponseEntity.ok(response);
     }

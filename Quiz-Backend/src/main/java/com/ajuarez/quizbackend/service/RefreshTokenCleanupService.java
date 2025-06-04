@@ -13,7 +13,7 @@ public class RefreshTokenCleanupService {
 
     private final RefreshTokenRepository refreshTokenRepository;
 
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(cron = "0 0 0 * * ?")
     public void deleteExpiredOrRevokedTokens() {
         LocalDateTime now = LocalDateTime.now();
         int deletedCount = refreshTokenRepository.deleteByRevokedTrueOrExpiryDateBefore(now);

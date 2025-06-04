@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
-import { API_URLS, WEB_URLS } from "../../helper/constants";
+import { API_URLS, WEB_URLS, CACHE_KEYS } from "../../helper/constants";
 import QuizCard from "../../components/QuizCard";
+import useLocalCache from "../../hooks/useLocalCache";
 
 const Search = () => {
   const axiosPrivate = useAxiosPrivate();
+
+  const { get, set, clear } = useLocalCache();
 
   const [quizzes, setQuizzes] = useState([]);
   const [searchParams, setSearchParams] = useState({
@@ -21,27 +24,23 @@ const Search = () => {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchFilters = async () => {
-      try {
-        const [categoriesRes, difficultiesRes, creatorsRes] = await Promise.all(
-          [
-            axiosPrivate.get(API_URLS.QUIZ.CATEGORIES),
-            axiosPrivate.get(API_URLS.QUIZ.DIFFICULTIES),
-            axiosPrivate.get(API_URLS.QUIZ.CREATORS),
-          ]
-        );
+  const fetchFilters = async () => {
+    try {
+      const [searchInfoRes] = await Promise.all([
+        axiosPrivate.get(API_URLS.QUIZ.SEARCH_INFO),
+      ]);
 
-        setCategories(categoriesRes.data);
-        setDifficulties(difficultiesRes.data);
-        setCreators(creatorsRes.data);
-      } catch (error) {
-        console.error("Failed to fetch filter data", error);
-      }
-    };
+      const data = searchInfoRes.data;
 
-    fetchFilters();
-  }, [axiosPrivate]);
+      setCategories(data.categories);
+      setDifficulties(data.difficulties);
+      setCreators(data.creators);
+
+      set(CACHE_KEYS.SEARCH_FILTERS, data);
+    } catch (error) {
+      console.error("Failed to fetch filter data", error);
+    }
+  };
 
   const fetchQuizzes = async () => {
     try {
@@ -51,18 +50,38 @@ const Search = () => {
         .join("&");
 
       const url = `${API_URLS.QUIZ.SEARCH}${
-        query ? "?" + query + "&sort=asc" : "?sort=asc"
+        query ? "?" + query + "&sort=desc" : "?sort=desc"
       }`;
       const response = await axiosPrivate.get(url);
       setQuizzes(response.data);
+
+      set(CACHE_KEYS.SEARCH_RESULTS, {
+        quizzes: response.data,
+        searchParams: searchParams,
+      });
     } catch (error) {
       console.error("Failed to fetch quizzes", error);
     }
   };
 
   useEffect(() => {
-    fetchQuizzes();
-  }, []);
+    const cached = get(CACHE_KEYS.SEARCH_FILTERS);
+    if (cached) {
+      setCategories(cached.categories);
+      setDifficulties(cached.difficulties);
+      setCreators(cached.creators);
+    } else {
+      fetchFilters();
+    }
+
+    const cachedQuizzesData = get(CACHE_KEYS.SEARCH_RESULTS);
+    if (cachedQuizzesData) {
+      setQuizzes(cachedQuizzesData.quizzes);
+      setSearchParams(cachedQuizzesData.searchParams || searchParams);
+    } else {
+      fetchQuizzes();
+    }
+  }, [axiosPrivate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -70,6 +89,13 @@ const Search = () => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleSearchQuiz = () => {
+    clear(CACHE_KEYS.SEARCH_RESULTS);
+    clear(CACHE_KEYS.SEARCH_FILTERS);
+    fetchFilters();
+    fetchQuizzes();
   };
 
   const handleTakeQuiz = (quizId) => {
@@ -82,21 +108,21 @@ const Search = () => {
         Search Quizzes
       </h2>
 
-      <div className="flex flex-wrap gap-2 mb-6 justify-center">
+      <div className="flex flex-wrap gap-2 mb-6 justify-center items-end">
         <input
           type="text"
           name="title"
           placeholder="Title"
           value={searchParams.title}
           onChange={handleInputChange}
-          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-48 focus:outline-none focus:border-purple-500"
+          className="border border-gray-300 rounded px-3 py-2 sm:w-48 focus:outline-none focus:border-purple-500"
         />
 
         <select
           name="category"
           value={searchParams.category}
           onChange={handleInputChange}
-          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-48 focus:outline-none focus:border-purple-500"
+          className="border border-gray-300 rounded px-3 py-2 sm:w-48 focus:outline-none focus:border-purple-500"
         >
           <option value="">All Categories</option>
           {categories.map((cat) => (
@@ -110,7 +136,7 @@ const Search = () => {
           name="difficulty"
           value={searchParams.difficulty}
           onChange={handleInputChange}
-          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-48 focus:outline-none focus:border-purple-500"
+          className="border border-gray-300 rounded px-3 py-2 sm:w-48 focus:outline-none focus:border-purple-500"
         >
           <option value="">All Difficulties</option>
           {difficulties.map((dif) => (
@@ -124,7 +150,7 @@ const Search = () => {
           name="createdBy"
           value={searchParams.createdBy}
           onChange={handleInputChange}
-          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-48 focus:outline-none focus:border-purple-500"
+          className="border border-gray-300 rounded px-3 py-2 sm:w-48 focus:outline-none focus:border-purple-500"
         >
           <option value="">All Creators</option>
           {creators.map((creator) => (
@@ -135,7 +161,7 @@ const Search = () => {
         </select>
 
         <button
-          onClick={fetchQuizzes}
+          onClick={handleSearchQuiz}
           className="bg-purple-500 text-white font-semibold rounded px-4 py-2 hover:bg-purple-600 transition-colors"
         >
           Search
@@ -143,7 +169,7 @@ const Search = () => {
       </div>
 
       <div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">
+        <h3 className="text-xl font-semibold text-gray-800 text-center mb-4">
           Results
         </h3>
         <QuizCard

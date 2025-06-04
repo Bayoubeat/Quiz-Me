@@ -3,10 +3,7 @@ package com.ajuarez.quizbackend.service;
 import com.ajuarez.quizbackend.dto.quizAttempt.QuizAttemptHistoryResponseDto;
 import com.ajuarez.quizbackend.dto.quizAttempt.QuizAttemptRequestDto;
 import com.ajuarez.quizbackend.dto.quizAttempt.QuizAttemptResponseDto;
-import com.ajuarez.quizbackend.model.Question;
-import com.ajuarez.quizbackend.model.Quiz;
-import com.ajuarez.quizbackend.model.QuizAttempt;
-import com.ajuarez.quizbackend.model.User;
+import com.ajuarez.quizbackend.model.*;
 import com.ajuarez.quizbackend.repository.QuizAttemptRepository;
 import com.ajuarez.quizbackend.repository.QuizRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -34,12 +32,29 @@ public class QuizAttemptServiceImpl implements QuizAttemptService {
             throw new IllegalArgumentException("Answer count does not match number of questions.");
         }
 
+        QuizAttemptResponseDto response = new QuizAttemptResponseDto();
+        List<QuizAttemptResponseDto.QuizAnswersDto> gradedAnswers = new ArrayList<>();
+
         int score = 0;
         for (int i = 0; i < questions.size(); i++) {
+            List<Option> options = questions.get(i).getOptions();
+            boolean correctAnswerGiven = false;
             if (questions.get(i).getCorrectOptionIndex() == userAnswers.get(i)) {
                 score++;
+                correctAnswerGiven = true;
             }
+            QuizAttemptResponseDto.QuizAnswersDto answer = new QuizAttemptResponseDto.QuizAnswersDto();
+            answer.setQuestion(questions.get(i).getText());
+            answer.setAnswer(options.get(userAnswers.get(i)).getText());
+            answer.setIsCorrect(correctAnswerGiven);
+            gradedAnswers.add(answer);
         }
+        
+        response.setQuizId(quiz.getQuizId());
+        response.setScore(score);
+        response.setTotalQuestions(questions.size());
+        response.setTitle(quiz.getTitle());
+        response.setAnswers(gradedAnswers);
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -54,11 +69,7 @@ public class QuizAttemptServiceImpl implements QuizAttemptService {
             quizAttemptRepository.save(attempt);
         }
 
-        QuizAttemptResponseDto response = new QuizAttemptResponseDto();
-        response.setQuizId(quiz.getQuizId());
-        response.setScore(score);
-        response.setTotalQuestions(questions.size());
-        response.setTitle(quiz.getTitle());
+
         return response;
     }
 

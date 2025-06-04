@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import useAxiosPrivate from "../../hooks/useAxiosPrivate";
 import { useNavigate } from "react-router-dom";
-import { WEB_URLS, API_URLS } from "../../helper/constants";
+import { WEB_URLS, API_URLS, CACHE_KEYS } from "../../helper/constants";
 import { toast } from "react-toastify";
+import useLocalCache from "../../hooks/useLocalCache";
 
 const CreateQuiz = () => {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ const CreateQuiz = () => {
   const [categories, setCategories] = useState([]);
   const [difficulties, setDifficulties] = useState([]);
 
+  const { get, set, clear } = useLocalCache();
+
   const initialQuiz = {
     title: "",
     category: "",
@@ -18,30 +21,43 @@ const CreateQuiz = () => {
     questions: [],
   };
 
+  const [quiz, setQuiz] = useState(initialQuiz);
+
   useEffect(() => {
-    const fetchFilters = async () => {
-      try {
-        const [categoriesRes, difficultiesRes] = await Promise.all([
-          axiosPrivate.get(API_URLS.QUIZ.CATEGORIES),
-          axiosPrivate.get(API_URLS.QUIZ.DIFFICULTIES),
-        ]);
-
-        setCategories(categoriesRes.data);
-        setDifficulties(difficultiesRes.data);
-      } catch (error) {
-        console.error("Failed to fetch filter data", error);
-      }
-    };
-
-    fetchFilters();
+    const cached = get(CACHE_KEYS.SEARCH_FILTERS);
+    if (cached) {
+      setCategories(cached.categories);
+      setDifficulties(cached.difficulties);
+    } else {
+      fetchFilters();
+    }
   }, [axiosPrivate]);
 
-  const [quiz, setQuiz] = useState({
-    title: "",
-    category: "",
-    difficulty: "",
-    questions: [],
-  });
+  const fetchFilters = async () => {
+    try {
+      const [searchInfoRes] = await Promise.all([
+        axiosPrivate.get(API_URLS.QUIZ.SEARCH_INFO),
+      ]);
+      const data = searchInfoRes.data;
+
+      setCategories(data.categories);
+      setDifficulties(data.difficulties);
+
+      set(CACHE_KEYS.SEARCH_FILTERS, data);
+    } catch (error) {
+      console.error("Failed to fetch filter data", error);
+    }
+  };
+
+  const handleRefresh = () => {
+    clear(CACHE_KEYS.SEARCH_FILTERS);
+    fetchFilters();
+    setQuiz((prev) => ({
+      ...prev,
+      category: "",
+      difficulty: "",
+    }));
+  };
 
   const handleQuizChange = (e) => {
     const { name, value } = e.target;
@@ -74,18 +90,6 @@ const CreateQuiz = () => {
     });
   };
 
-  const handleQuestionIndexChange = (index, e) => {
-    const value = parseInt(e.target.value, 10);
-    setQuiz((prev) => {
-      const updatedQuestions = [...prev.questions];
-      updatedQuestions[index].correctOptionIndex = value - 1;
-      return {
-        ...prev,
-        questions: updatedQuestions,
-      };
-    });
-  };
-
   const addQuestion = () => {
     if (quiz.questions.length >= 20) return;
     setQuiz((prev) => ({
@@ -95,7 +99,7 @@ const CreateQuiz = () => {
         {
           text: "",
           options: ["", "", "", ""],
-          correctOptionIndex: 0,
+          correctOptionIndex: null,
         },
       ],
     }));
@@ -123,9 +127,18 @@ const CreateQuiz = () => {
       return;
     }
     if (quiz.difficulty === "") {
-      altoast.warningert("You must specify a difficulty!");
+      toast.warning("You must specify a difficulty!");
       return;
     }
+
+    const hasUnselectedCorrectOption = quiz.questions.some(
+      (q) => q.correctOptionIndex === null
+    );
+    if (hasUnselectedCorrectOption) {
+      toast.warning("Every question must have a correct answer selected!");
+      return;
+    }
+
     try {
       await axiosPrivate.post(API_URLS.QUIZ.CREATE, quiz);
       toast.success("Quiz created successfully!");
@@ -133,7 +146,7 @@ const CreateQuiz = () => {
       navigate(WEB_URLS.QUIZ_CREATE);
     } catch (error) {
       console.error("Failed to create quiz", error);
-      toast.error("Failed to create quiz.");
+      toast.error("Failed to create quiz. Refresh your filters and try again.");
     }
   };
 
@@ -157,7 +170,7 @@ const CreateQuiz = () => {
           />
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-4 items-end">
           <div className="flex-1">
             <label className="block font-semibold text-gray-700 mb-1">
               Category:
@@ -195,6 +208,16 @@ const CreateQuiz = () => {
               ))}
             </select>
           </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="bg-yellow-500 text-white font-semibold rounded px-4 py-2 hover:bg-yellow-600 transition-colors"
+            >
+              Refresh Filters
+            </button>
+          </div>
         </div>
 
         <div>
@@ -229,37 +252,40 @@ const CreateQuiz = () => {
                 required
               />
 
-              <div className="mb-2">
-                <label className="font-semibold text-gray-700 mr-2">
-                  Correct Option:
-                </label>
-                <input
-                  type="number"
-                  name="correctOptionIndex"
-                  value={q.correctOptionIndex + 1}
-                  onChange={(e) => handleQuestionIndexChange(index, e)}
-                  min="1"
-                  max={q.options.length}
-                  className="border border-gray-300 rounded px-2 py-1 w-16 focus:outline-none focus:border-purple-500"
-                  required
-                />
-              </div>
-
               <div>
                 <h5 className="font-medium text-gray-700 mb-1">Options:</h5>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-2">
                   {q.options.map((opt, optIndex) => (
-                    <input
-                      key={optIndex}
-                      type="text"
-                      placeholder={`Option ${optIndex + 1}`}
-                      value={opt}
-                      onChange={(e) =>
-                        handleOptionChange(index, optIndex, e.target.value)
-                      }
-                      className="border border-gray-300 rounded px-3 py-2 flex-1 focus:outline-none focus:border-purple-500"
-                      required
-                    />
+                    <div key={optIndex} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder={`Option ${optIndex + 1}`}
+                        value={opt}
+                        onChange={(e) =>
+                          handleOptionChange(index, optIndex, e.target.value)
+                        }
+                        className={`border border-gray-300 rounded px-3 py-2 flex-1 focus:outline-none focus:border-purple-500 ${
+                          q.correctOptionIndex === optIndex
+                            ? "bg-green-100"
+                            : ""
+                        }`}
+                        required
+                      />
+
+                      <input
+                        type="checkbox"
+                        checked={q.correctOptionIndex === optIndex}
+                        onChange={() => {
+                          setQuiz((prev) => {
+                            const updatedQuestions = [...prev.questions];
+                            updatedQuestions[index].correctOptionIndex =
+                              optIndex;
+                            return { ...prev, questions: updatedQuestions };
+                          });
+                        }}
+                        className="accent-purple-500 w-5 h-5 cursor-pointer"
+                      />
+                    </div>
                   ))}
                 </div>
               </div>

@@ -30,16 +30,18 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // <--- this line
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/quizzes/create").authenticated()
-                        .requestMatchers("/api/attempts/**").permitAll()
-                        .requestMatchers("/api/quizzes/fetch/**").permitAll()
-                        .requestMatchers("/api/quizzes/search").permitAll()
-                        .requestMatchers("/api/quizzes/categories").permitAll()
-                        .requestMatchers("/api/quizzes/difficulties").permitAll()
-                        .requestMatchers("/api/quizzes/creators").permitAll()
+
+                        .requestMatchers("/api/attempts/submit").permitAll()
+                        .requestMatchers("/api/attempts/history").authenticated()
+
                         .requestMatchers("/api/leaderboard/**").permitAll()
+
+                        .requestMatchers("/api/quizzes/create/**").authenticated()
+                        .requestMatchers("/api/quizzes/delete/**").authenticated()
+                        .requestMatchers("/api/quizzes/fetch/**").permitAll()
+                        .requestMatchers("/api/quizzes/search/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

@@ -13,6 +13,7 @@ export const WEB_URLS = {
   QUIZ_HISTORY: "/history",
   QUIZ_LEADERBOARD: "/leaderboard",
   UNAUTHORIZED: "/unauthorized",
+  MISSING: "/missing",
 };
 
 export const API_URLS = {
@@ -30,23 +31,30 @@ export const API_URLS = {
     HISTORY: "/api/attempts/history",
   },
   QUIZ: {
-    CREATE: "/api/quizzes/create",
-    SEARCH: "/api/quizzes/search",
+    CREATE: "/api/quizzes/create/quiz",
+    SEARCH: "/api/quizzes/search/all",
+    SEARCH_INFO: "/api/quizzes/search/info",
+
     FETCH: (id) => {
       return `/api/quizzes/fetch/${id}`;
     },
     DELETE: (id) => {
       return `/api/quizzes/delete/${id}`;
     },
-    CATEGORIES: "/api/quizzes/categories",
-    DIFFICULTIES: "/api/quizzes/difficulties",
-    CREATORS: "/api/quizzes/creators",
   },
 };
 
 export const ROLES = {
   User: "ROLE_USER",
   Admin: "ROLE_ADMIN",
+};
+
+export const CACHE_KEYS = {
+  SEARCH_FILTERS: "quiz_search_info",
+  SEARCH_RESULTS: "quiz_search_results",
+  HISTORY: "quiz_attempt_history",
+  DELETE_LIST: "quiz_deletion_results",
+  LEADERBOARD: "quiz_leaderboard_data",
 };
 
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL;

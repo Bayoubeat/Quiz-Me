@@ -3,7 +3,6 @@ package com.ajuarez.quizbackend.service;
 import com.ajuarez.quizbackend.dto.leaderboard.LeaderboardEntryResponseDto;
 import com.ajuarez.quizbackend.repository.QuizAttemptRepository;
 import com.ajuarez.quizbackend.repository.QuizRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -21,10 +20,8 @@ public class LeaderboardServiceImpl implements LeaderboardService {
     }
 
     public List<LeaderboardEntryResponseDto> getLeaderboard() {
-        // Get best scores
         List<Object[]> results = quizAttemptRepository.findMaxScoresPerUserPerQuiz();
 
-        // Sum scores per user
         Map<String, Integer> userScores = new HashMap<>();
         for (Object[] row : results) {
             String username = (String) row[0];

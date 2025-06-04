@@ -3,10 +3,9 @@ package com.ajuarez.quizbackend.mapper;
 import com.ajuarez.quizbackend.context.QuizMapperContext;
 import com.ajuarez.quizbackend.dto.quiz.QuizCreationRequestDto;
 import com.ajuarez.quizbackend.dto.quiz.QuizDetailResponseDto;
+import com.ajuarez.quizbackend.dto.quiz.QuizSearchingInfoResponseDto;
 import com.ajuarez.quizbackend.dto.quiz.QuizSummaryResponseDto;
-import com.ajuarez.quizbackend.model.Option;
-import com.ajuarez.quizbackend.model.Question;
-import com.ajuarez.quizbackend.model.Quiz;
+import com.ajuarez.quizbackend.model.*;
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -73,6 +72,19 @@ public interface QuizMapper {
         }).collect(Collectors.toList());
 
         dto.setQuestions(questions);
+        return dto;
+    }
+
+    default QuizSearchingInfoResponseDto toSearchingInfoDto(List<User> users, List<Category> categories, List<Difficulty> difficulties) {
+        QuizSearchingInfoResponseDto dto = new QuizSearchingInfoResponseDto();
+        List<String> userNames = users.stream().map(User::getDisplayName).toList();
+        List<String> categoriesList = categories.stream().map(Category::getCategoryName).toList();
+        List<String> difficultiesList = difficulties.stream().map(Difficulty::getDifficultyName).toList();
+
+        dto.setCreators(userNames);
+        dto.setCategories(categoriesList);
+        dto.setDifficulties(difficultiesList);
+
         return dto;
     }
 }

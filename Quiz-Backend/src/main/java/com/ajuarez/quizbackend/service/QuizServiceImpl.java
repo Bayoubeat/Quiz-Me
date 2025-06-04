@@ -1,17 +1,10 @@
 package com.ajuarez.quizbackend.service;
 
 import com.ajuarez.quizbackend.context.QuizMapperContext;
-import com.ajuarez.quizbackend.dto.quiz.MultipleQuizCreationRequestDto;
-import com.ajuarez.quizbackend.dto.quiz.QuizCreationRequestDto;
-import com.ajuarez.quizbackend.dto.quiz.QuizDetailResponseDto;
-import com.ajuarez.quizbackend.dto.quiz.QuizSummaryResponseDto;
+import com.ajuarez.quizbackend.dto.quiz.*;
 import com.ajuarez.quizbackend.mapper.QuizMapper;
-import com.ajuarez.quizbackend.model.Option;
-import com.ajuarez.quizbackend.model.Question;
-import com.ajuarez.quizbackend.model.Quiz;
-import com.ajuarez.quizbackend.model.User;
-import com.ajuarez.quizbackend.repository.QuizAttemptRepository;
-import com.ajuarez.quizbackend.repository.QuizRepository;
+import com.ajuarez.quizbackend.model.*;
+import com.ajuarez.quizbackend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -28,10 +21,38 @@ public class QuizServiceImpl implements QuizService {
     private final QuizRepository quizRepository;
     private final QuizMapper quizMapper;
     private final QuizAttemptRepository quizAttemptRepository;
+    private final UserRepository userRepository;
+    private final CategoryRepository categoryRepository;
+    private final DifficultyRepository difficultyRepository;
 
     @Transactional
     @Override
     public Quiz createQuiz(QuizCreationRequestDto dto, User creator) {
+        Category category;
+        Difficulty difficulty;
+
+        if (creator.getRoles().contains("ROLE_ADMIN")) {
+            category = categoryRepository.findByCategoryName(dto.getCategory())
+                    .orElseGet(() -> {
+                        Category newCategory = new Category();
+                        newCategory.setCategoryName(dto.getCategory());
+                        return categoryRepository.save(newCategory);
+                    });
+
+            difficulty = difficultyRepository.findByDifficultyName(dto.getDifficulty())
+                    .orElseGet(() -> {
+                        Difficulty newDifficulty = new Difficulty();
+                        newDifficulty.setDifficultyName(dto.getDifficulty());
+                        return difficultyRepository.save(newDifficulty);
+                    });
+        } else {
+            category = categoryRepository.findByCategoryName(dto.getCategory())
+                    .orElseThrow(() -> new RuntimeException("Category not found: " + dto.getCategory()));
+
+            difficulty = difficultyRepository.findByDifficultyName(dto.getDifficulty())
+                    .orElseThrow(() -> new RuntimeException("Difficulty not found: " + dto.getDifficulty()));
+        }
+
 
         Quiz quiz = quizMapper.toQuiz(dto);
         quiz.setDifficulty(dto.getDifficulty());
@@ -120,24 +141,65 @@ public class QuizServiceImpl implements QuizService {
     @Override
     public void deleteQuizzes(List<Long> quizIds, User currentUser) {
         for (Long id : quizIds) {
-            deleteQuiz(id, currentUser); // Leverage the single quiz deletion logic
+            deleteQuiz(id, currentUser);
         }
     }
 
     @Override
-    public List<String> getAllUniqueCategories() {
-        return quizRepository.findAllUniqueCategories();
+    public QuizSearchingInfoResponseDto getQuizSearchingInfo() {
+        List<User> users = userRepository.findAll();
+        List<Category> categories = categoryRepository.findAll();
+        List<Difficulty> difficulty = difficultyRepository.findAll();
+
+        QuizSearchingInfoResponseDto dto = quizMapper.toSearchingInfoDto(users, categories, difficulty);
+
+        return dto;
     }
 
     @Override
-    public List<String> getAllUniqueDifficulties() {
-        return quizRepository.findAllUniqueDifficulties();
+    public void createCategory(QuizCategoryCreationRequestDto dto, User user) {
+        if (!user.getRoles().contains("ROLE_ADMIN")) {
+            throw new RuntimeException("Only admins can add categories");
+        }
+
+        Category newCategory = new Category();
+        newCategory.setCategoryName(dto.getCategoryName());
+
+        categoryRepository.save(newCategory);
     }
 
     @Override
-    public List<String> getAllUniqueCreators() {
-        return quizRepository.findAllUniqueCreators();
+    public void createDifficulty(QuizDifficultyCreationRequestDto dto, User user) {
+        if (!user.getRoles().contains("ROLE_ADMIN")) {
+            throw new RuntimeException("Only admins can add difficulties");
+        }
+
+        Difficulty newDifficulty = new Difficulty();
+        newDifficulty.setDifficultyName(dto.getDifficultyName());
+
+        difficultyRepository.save(newDifficulty);
     }
 
+    @Override
+    public void createMultipleCategory(MultiCategoryRequestDTo dto, User creator) {
+        if (!creator.getRoles().contains("ROLE_ADMIN")) {
+            throw new RuntimeException("Only admins can add difficulties");
+        }
+
+        for (QuizCategoryCreationRequestDto catDto : dto.getCategoryList()) {
+            createCategory(catDto, creator);
+        }
+    }
+
+    @Override
+    public void createMultipleDifficulty(MultiDifficultyRequestDto dto, User creator) {
+        if (!creator.getRoles().contains("ROLE_ADMIN")) {
+            throw new RuntimeException("Only admins can add difficulties");
+        }
+
+        for (QuizDifficultyCreationRequestDto difDto : dto.getDifficultyList()) {
+            createDifficulty(difDto, creator);
+        }
+    }
 }
 

@@ -1,8 +1,6 @@
 package com.ajuarez.quizbackend.controller;
 
-import com.ajuarez.quizbackend.dto.quiz.MultipleQuizCreationRequestDto;
-import com.ajuarez.quizbackend.dto.quiz.QuizCreationRequestDto;
-import com.ajuarez.quizbackend.dto.quiz.QuizSummaryResponseDto;
+import com.ajuarez.quizbackend.dto.quiz.*;
 import com.ajuarez.quizbackend.model.User;
 import com.ajuarez.quizbackend.repository.UserRepository;
 import com.ajuarez.quizbackend.service.QuizService;
@@ -13,7 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,23 +23,71 @@ public class QuizController {
     private final QuizService quizService;
     private final UserRepository userRepository;
 
-    @PostMapping("/create")
+    @PostMapping("/create/quiz")
     public ResponseEntity<Void> createQuiz(@RequestBody @Valid QuizCreationRequestDto dto, @AuthenticationPrincipal UserDetails userDetails) {
-        String username = StringUtils.capitalize(userDetails.getUsername());
-        User user = userRepository.findByUsername(username).orElseThrow();
+        User user = userRepository.findByUsername(userDetails.getUsername().toUpperCase()).orElseThrow();
         quizService.createQuiz(dto, user);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PostMapping("/create/multiple")
     public ResponseEntity<Void> createMultipleQuizzes(@RequestBody @Valid MultipleQuizCreationRequestDto dto, @AuthenticationPrincipal UserDetails userDetails) {
-        String username = StringUtils.capitalize(userDetails.getUsername());
-        User user = userRepository.findByUsername(username).orElseThrow();
+        User user = userRepository.findByUsername(userDetails.getUsername().toUpperCase()).orElseThrow();
         quizService.createMultipleQuizzes(dto, user);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @GetMapping("/search")
+    @PostMapping("/create/category")
+    public ResponseEntity<Void> createCategory(@RequestBody @Valid QuizCategoryCreationRequestDto dto, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername().toUpperCase()).orElseThrow();
+        quizService.createCategory(dto, user);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/create/category/multiple")
+    public ResponseEntity<Void> createCategoryMulti(@RequestBody @Valid MultiCategoryRequestDTo dto, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername().toUpperCase()).orElseThrow();
+        quizService.createMultipleCategory(dto, user);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/create/difficulty")
+    public ResponseEntity<Void> createDifficulty(@RequestBody @Valid QuizDifficultyCreationRequestDto dto, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername().toUpperCase()).orElseThrow();
+        quizService.createDifficulty(dto, user);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/create/difficulty/multiple")
+    public ResponseEntity<Void> createDifficultyMulti(@RequestBody @Valid MultiDifficultyRequestDto dto, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername().toUpperCase()).orElseThrow();
+        quizService.createMultipleDifficulty(dto, user);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+
+    @GetMapping("/fetch/{quizId}")
+    public ResponseEntity<?> getQuizById(@PathVariable Long quizId) {
+        return ResponseEntity.ok(quizService.getQuizById(quizId));
+    }
+
+
+    @DeleteMapping("delete/{quizId}")
+    public ResponseEntity<?> deleteQuiz(@PathVariable Long quizId, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername().toUpperCase()).orElseThrow();
+        quizService.deleteQuiz(quizId, user);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("delete/multi")
+    public ResponseEntity<?> deleteQuizzes(@RequestBody List<Long> quizIds, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername().toUpperCase()).orElseThrow();
+        quizService.deleteQuizzes(quizIds, user);
+        return ResponseEntity.ok().build();
+    }
+
+
+    @GetMapping("/search/all")
     public ResponseEntity<List<QuizSummaryResponseDto>> getAllQuizzes(
             @RequestParam(required = false) String title,
             @RequestParam(required = false) String category,
@@ -53,8 +98,7 @@ public class QuizController {
     ) {
         User user = null;
         if (userDetails != null) {
-            String username = StringUtils.capitalize(userDetails.getUsername());
-            user = userRepository.findByUsername(username).orElse(null);
+            user = userRepository.findByUsername(userDetails.getUsername().toUpperCase()).orElse(null);
         }
         Sort sortMethod = Sort.by(Sort.Direction.ASC, "quizId");
         if (sort != null) {
@@ -63,41 +107,9 @@ public class QuizController {
         return ResponseEntity.ok(quizService.searchQuizzes(title, category, difficulty, createdBy, sortMethod, user));
     }
 
-    @GetMapping("/fetch/{quizId}")
-    public ResponseEntity<?> getQuizById(@PathVariable Long quizId) {
-        return ResponseEntity.ok(quizService.getQuizById(quizId));
+    @GetMapping("/search/info")
+    public ResponseEntity<QuizSearchingInfoResponseDto> getQuizSearchingInfo() {
+
+        return ResponseEntity.ok(quizService.getQuizSearchingInfo());
     }
-
-    @DeleteMapping("delete/{quizId}")
-    public ResponseEntity<?> deleteQuiz(@PathVariable Long quizId, @AuthenticationPrincipal UserDetails userDetails) {
-        String username = StringUtils.capitalize(userDetails.getUsername());
-        User user = userRepository.findByUsername(username).orElseThrow();
-        quizService.deleteQuiz(quizId, user);
-        return ResponseEntity.ok().build();
-    }
-
-    @DeleteMapping("delete/multi")
-    public ResponseEntity<?> deleteQuizzes(@RequestBody List<Long> quizIds, @AuthenticationPrincipal UserDetails userDetails) {
-        String username = StringUtils.capitalize(userDetails.getUsername());
-        User user = userRepository.findByUsername(username).orElseThrow();
-        quizService.deleteQuizzes(quizIds, user);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping("/categories")
-    public ResponseEntity<List<String>> getAllCategories() {
-        return ResponseEntity.ok(quizService.getAllUniqueCategories());
-    }
-
-    @GetMapping("/difficulties")
-    public ResponseEntity<List<String>> getAllDifficulties() {
-        return ResponseEntity.ok(quizService.getAllUniqueDifficulties());
-    }
-
-    @GetMapping("/creators")
-    public ResponseEntity<List<String>> getAllCreators() {
-        return ResponseEntity.ok(quizService.getAllUniqueCreators());
-    }
-
-
 }

@@ -22,14 +22,4 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
 
     @Query("SELECT SUM(SIZE(q.questions)) FROM Quiz q")
     int getTotalQuestionCount();
-
-    @Query("SELECT DISTINCT q.category FROM Quiz q")
-    List<String> findAllUniqueCategories();
-
-    @Query("SELECT DISTINCT q.difficulty FROM Quiz q")
-    List<String> findAllUniqueDifficulties();
-
-    @Query("SELECT DISTINCT q.createdBy.username FROM Quiz q")
-    List<String> findAllUniqueCreators();
-
 }

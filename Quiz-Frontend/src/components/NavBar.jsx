@@ -74,7 +74,7 @@ const NavBar = () => {
         <div className="flex ml-0 md:ml-auto gap-2 md:gap-8 items-center flex-nowrap">
           {auth?.accessToken && (
             <span className="text-sm md:text-base font-medium text-gray-700 flex-shrink-0">
-              Hello, {auth.username}!
+              Hello, {auth.displayName}!
             </span>
           )}
           {auth?.accessToken ? (

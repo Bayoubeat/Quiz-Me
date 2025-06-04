@@ -2,11 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "../../api/axios";
 import { API_URLS, WEB_URLS } from "../../helper/constants";
+import useAuth from "../../hooks/useAuth";
 
 const USER_REGEX = /^[A-z][A-z0-9-_]{3,23}$/;
 const PWD_REGEX = /^(?=.*[a-z])(?=.*[A-Z]).{4,24}$/;
 
 export default function Register() {
+  const { auth, setAuth, persist, setPersist } = useAuth();
+
   const userRef = useRef();
   const errRef = useRef();
   const [errMsg, setErrMsg] = useState("");
@@ -52,6 +55,16 @@ export default function Register() {
           withCredentials: true,
         }
       );
+      const accessToken = response?.data?.accessToken;
+      const roles = response?.data?.roles;
+      const upUsername = response?.data?.username;
+      setAuth({
+        username: upUsername,
+        displayName: username,
+        roles,
+        accessToken,
+      });
+      localStorage.setItem("auth", JSON.stringify(auth));
       navigate(WEB_URLS.LANDING);
     } catch (err) {
       if (!err?.response) {
